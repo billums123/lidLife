@@ -7,7 +7,7 @@ serialInputClass::serialInputClass()
 {
 }
 
-unsigned int serialInputClass::RX_SetupData_Int(String DataRequest)
+unsigned int serialInputClass::RX_SetupData(String DataRequest, String outputType)
 {
   String inString = "";
   unsigned int rxInt = 0;
@@ -46,7 +46,12 @@ unsigned int serialInputClass::RX_SetupData_Int(String DataRequest)
       }
       else if (inChar == '\n' && inString[0] != 0) // once all the digits have been received
       {                                            // convert to an integer and exit
+      if (outputType == "float"){
+        rxInt = inString.toFloat();
+      }
+      else{
         rxInt = inString.toInt();
+      }
         dataReceived = true;
 #ifdef DEBUG
         Serial.print(DataRequest);
