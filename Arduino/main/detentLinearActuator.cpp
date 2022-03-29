@@ -1,11 +1,14 @@
 #include "Arduino.h"
-#include "detentLinearActuator.h"
+#include "DetentLinearActuator.h"
 
-detentLinearActuatorClass::detentLinearActuatorClass()
+DetentLinearActuator::DetentLinearActuator(int linActDir1, int linActDir2, int linActPinPWM)
 {
+    _linActDir1 = linActDir1;
+    _linActDir2 = linActDir2;
+    _linActPinPWM = linActPinPWM;
 }
 
-bool detentLinearActuatorClass::checkIfDetentsAreUsed(String detentUseStatus)
+bool DetentLinearActuator::CheckIfDetentsAreUsed(String detentUseStatus)
 {
     bool detentsInUse;
     if ((detentUseStatus == "y") || (detentUseStatus == "Y") || (detentUseStatus == "yes") || (detentUseStatus == "Yes"))
@@ -19,32 +22,37 @@ bool detentLinearActuatorClass::checkIfDetentsAreUsed(String detentUseStatus)
     else
     {
         Serial.println("Invalid character input, please try again.");
-        return;
+        
     }
 }
 
-void detentLinearActuatorClass::setup(int linActDir1, int linActDir2, int linActPinPWM)
+void DetentLinearActuator::Setup()
 {
-    pinMode(linActDir1, OUTPUT);
-    pinMode(linActDir2, OUTPUT);
-    pinMode(linActPinPWM, OUTPUT);
+    pinMode(_linActDir1, OUTPUT);
+    pinMode(_linActDir2, OUTPUT);
+    pinMode(_linActPinPWM, OUTPUT);
+    digitalWrite(_linActPinPWM, LOW);
 }
 
-void detentLinearActuatorClass::extend(int linActDir1, int linActDir2, int linActPinPWM, int extensionTime)
+void DetentLinearActuator::Extend()
 {
-    digitalWrite(linActDir1, LOW);
-    digitalWrite(linActDir2,HIGH);
-    digitalWrite(linActPinPWM, HIGH);
-    delay(extensionTime);
-    digitalWrite(linActPinPWM, LOW);
+    digitalWrite(_linActDir1, LOW);
+    digitalWrite(_linActDir2, HIGH);
+    digitalWrite(_linActPinPWM, HIGH);
+    // delay(extensionTime);
+    // digitalWrite(_linActPinPWM, LOW);
 }
-void detentLinearActuatorClass::retract(int linActDir1, int linActDir2, int linActPinPWM, int rectractionTime)
+void DetentLinearActuator::Retract()
 {
-    digitalWrite(linActDir1, HIGH);
-    digitalWrite(linActDir2,LOW);
-    digitalWrite(linActPinPWM, HIGH);
-    delay(rectractionTime);
-    digitalWrite(linActPinPWM, LOW);
+    digitalWrite(_linActDir1, HIGH);
+    digitalWrite(_linActDir2, LOW);
+    digitalWrite(_linActPinPWM, HIGH);
+    // delay(retractionTime);
+    // digitalWrite(_linActPinPWM, LOW);
 }
-
-detentLinearActuatorClass detentLinearActuator = detentLinearActuatorClass();
+void DetentLinearActuator::Stop()
+{
+    digitalWrite(_linActPinPWM, LOW);
+    // delay(retractionTime);
+    // digitalWrite(_linActPinPWM, LOW);
+}

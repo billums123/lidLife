@@ -1,94 +1,197 @@
 
+
 //---------------Includes---------------//
 #include "HX711.h"
 #include "serialInput.h"
-#include "detentLinearActuator.h"
+#include "DetentLinearActuator.h"
 #include "StrainGauge.h"
-
+#include "LidStepperMotor.h"
+#include "IRSensors.h"
+int z = 0;
 // #define DEBUG
-
+#define runSetupPrompts
 // Count Variables
-int startingCycleCount = 0;
+int startingCycleCount;
+int cycleCount;
+bool beginCycleTimer = true;
+unsigned long raiseCycleTime;
+unsigned long lowerCycleTime;
+bool lidAtClosedPosition;
+bool lidAtOpenPosition= false; //variable for keeping track of point in cycle
+// int z = 0;
+// int q = 0;
 
-const int tare_LED = 4;
+// Lid Lifter Motor Variables
+const int lidStepperMotorDirPin = 2;        // LidStepperMotor Direction
+const int lidStepperMotorPulPin = 3;        // LidStepperMotor Pulse Pin
+const int lidStepperMotorEnaPin = 4;        // LidStepperMotor On/Off Toggle
+const int lidStepperMotorStepsPerRev = 400; // LidStepperMotor Steps per revolution
+const int lidMotorSlowSpeed = 1000;
+const int lidMotorMaxSpeed = 10000;
+const int lidMotorAcceleration = 15000;
+int numStepsRaiseLid = 21000;
+int numStepsLowerLid = 0;
+float lidLiftForceArray[5];
+int t = 0; // indexing variable for array
 
-// Lid Lifter Strain Gauge Variables
+LidStepperMotor LidLifterStepperMotor(lidStepperMotorDirPin, lidStepperMotorPulPin, lidStepperMotorEnaPin, lidMotorSlowSpeed, lidMotorMaxSpeed, lidMotorAcceleration);
+
+// Lid Lifter Strain Gauge Variablel
 float lidLifterCalibF = -440.02;
 bool lidLifterCalibrationNeeded;
-const int lidLiftStrainGauge_DOUT_pin = 2;
-const int lidLiftStrainGauge_SCK_pin = 3;
+const int lidLiftStrainGauge_DOUT_pin = 5;
+const int lidLiftStrainGauge_SCK_pin = 6;
+int numOfMeasurements = 5;
+int measurementFrequency = numStepsRaiseLid / numOfMeasurements;
+int delayBetweenMeasurements = 500;
 String lidLifterStrainGaugeName = "Lid Lifter";
-StrainGauge lidLifterStrainGauge(lidLiftStrainGauge_DOUT_pin,lidLiftStrainGauge_SCK_pin,lidLifterCalibF,lidLifterStrainGaugeName) ;
+StrainGauge LidLifterStrainGauge(lidLiftStrainGauge_DOUT_pin, lidLiftStrainGauge_SCK_pin, lidLifterCalibF, lidLifterStrainGaugeName);
 
 // Lid Pusher Strain Gauge Variables
-double lidPusherCalibF = 1000;
+double lidPusherCalibF = 466.21;
 bool lidPusherCalibrationNeeded;
-const int lidPushStrainGauge_DOUT_pin = 11;
-const int lidPushStrainGauge_SCK_pin = 1;
+const int lidPushStrainGauge_DOUT_pin = 7;
+const int lidPushStrainGauge_SCK_pin = 8;
 String lidPusherStrainGaugeName = "Lid Pusher";
-StrainGauge lidPusherStrainGauge(lidPushStrainGauge_DOUT_pin,lidPushStrainGauge_SCK_pin,lidPusherCalibF,lidPusherStrainGaugeName) ;
-const int onBoardLED = 13;
-
-// Detents Variables
-bool detentsInUse;
+StrainGauge LidPusherStrainGauge(lidPushStrainGauge_DOUT_pin, lidPushStrainGauge_SCK_pin, lidPusherCalibF, lidPusherStrainGaugeName);
+// const int onBoardLED = 13;
 
 // Detent Linear Actuator Variables
-const int linActDir1 = 5;
-const int linActDir2 = 6;
-const int linActPinPWM = 10;
-int linActExtendTime = 1500;
-int linActRetractTime = 1500;
+bool detentsInUse;
+const int linActDir1 = 9;
+const int linActDir2 = 10;
+const int linActPinPWM = 11;
+int linActSetupExtendTime = 12000;
+int linActSetupRetractTime = 2000;
+int linActExtendTime = 2250;
+int linActRetractTime = 8000;
+DetentLinearActuator DetentPushLinearActuator(linActDir1, linActDir2, linActPinPWM);
 
+// IRSensorVariables
+const int IRSensorBottomPin = A0;
+const int IRSensorTopPin = A1;
+
+
+IRSensors CycleAndTimerCountIRSensors(IRSensorBottomPin, IRSensorTopPin);
 void setup()
 {
-  Serial.begin(38400);
-  pinMode(tare_LED, OUTPUT);
-  detentLinearActuator.setup(linActDir1, linActDir2, linActPinPWM);
+  Serial.begin(230400);
+  // startClock = millis();
+  // pinMode(tare_LED, OUTPUT);
+  // Serial.println("Setting up");
+  DetentPushLinearActuator.Setup();
+  LidLifterStepperMotor.Setup();
+  CycleAndTimerCountIRSensors.Setup();
+#ifdef runSetupPrompts
+  lidLifterCalibrationNeeded = LidLifterStrainGauge.Setup();
 
-  // Setup for lid lifter strain gauge
-  lidLifterCalibrationNeeded = lidLifterStrainGauge.Setup();
-  Serial.print("lifter: ");
-  Serial.println(lidLifterCalibrationNeeded);
+  // Check if calibration is needed for the lid lifter strain gauge
   if (lidLifterCalibrationNeeded == true)
   {
-    lidLifterStrainGauge.CalbrateScale();
+    LidLifterStrainGauge.CalbrateScale();
   }
- 
-  // Setup for lid pusher strain gauge
-  lidPusherCalibrationNeeded = lidPusherStrainGauge.Setup();
-  Serial.print("pusher: ");
-  Serial.println(lidPusherCalibrationNeeded);
+#endif
+
+  // Check if calibration is needed for the lid pusher strain gauge
+#ifdef runSetupPrompts
+  lidPusherCalibrationNeeded = LidPusherStrainGauge.Setup();
   if (lidPusherCalibrationNeeded == true)
   {
-    lidPusherStrainGauge.CalbrateScale();
+    LidPusherStrainGauge.CalbrateScale();
   }
+#endif
 
-  startingCycleCount = serialInput.RX_SetupData("Enter beginning cycle count:", "integer"); // Request cycle count input from user
-  Serial.print("Starting count has been set to: ");
-  Serial.println(startingCycleCount);
-delay(500);
-  String detentsUsed = serialInput.RX_SetupData_String("Are detents being used in this test? (y/n)");
+  if (CycleAndTimerCountIRSensors.SenseOpen() == 0)
+  { // If the lid is open on startup, push it over to the closed position
+    DetentPushLinearActuator.Extend();
+    delay(linActSetupExtendTime);
+  }
+  DetentPushLinearActuator.Retract();
+
+  // Setup for lid lifter strain gauge
 #ifdef DEBUG
-  Serial.print("User detent input: ");
-  Serial.println(detentsUsed);
+
+  Serial.print("lifter: ");
+  Serial.println(lidLifterCalibrationNeeded);
 #endif
-  bool detentsInUse = detentLinearActuator.checkIfDetentsAreUsed(detentsUsed);
+
+  // Setup for lid pusher strain gauge
 #ifdef DEBUG
-  Serial.print("Detents Used? ");
-  Serial.println(detentsInUse);
+  Serial.print("pusher: ");
+  Serial.println(lidPusherCalibrationNeeded);
 #endif
+
+  // #ifdef runSetupPrompts
+  startingCycleCount = serialInput.RX_SetupData("Enter beginning cycle count:"); // Request cycle count input from user
+  cycleCount = startingCycleCount; //assign the input cycle count from user
+
+  // Put Linear Actuator in Starting Position
+  DetentPushLinearActuator.Extend();
+  delay(2250);
+  DetentPushLinearActuator.Stop();
 }
 
 void loop()
 {
-  // if(det)
-  detentLinearActuator.extend(linActDir1, linActDir2, linActPinPWM, linActExtendTime);
-  lidLifterStrainGauge.MeasureForce();
-  lidPusherStrainGauge.MeasureForce();
-  delay(500);
-  // detentLinearActuator.retract(linActDir1,linActDir2,linActPinPWM,linActRetractTime);
+  
+//RUN THE CODE BELOW AS THE LID IS BEING RAISED
+if (lidAtOpenPosition == false){
+  if (CycleAndTimerCountIRSensors.SenseOpen() == 1)
+  {
 
-  // //  scale.power_down();             // put the ADC in sleep mode
-  // //  delay(5000);
-  // //  scale.power_up();
+    if (beginCycleTimer == true)
+    {
+      CycleAndTimerCountIRSensors.StartTimer();
+      Serial.println("TimerSTarted");
+    }
+    beginCycleTimer = false;
+    LidLifterStepperMotor.moveTo(numStepsRaiseLid);
+    LidLifterStepperMotor.RaiseLid();
+    if (((z % measurementFrequency) == 0) && (z != 0))
+    {
+      lidLiftForceArray[t] = LidLifterStrainGauge.MeasureForce(); // safe lid lift forces into array
+      t++;
+    }
+    z++;
+  }
+  if (CycleAndTimerCountIRSensors.SenseOpen() == 0) // lid in open position
+  {
+    if (beginCycleTimer == false)
+    {
+      raiseCycleTime = CycleAndTimerCountIRSensors.StopTimer();
+      Serial.print("cycle time: ");
+      Serial.println(raiseCycleTime);
+      
+      // Serial.println(lidLiftForceArray[0]);
+      // Serial.println(lidLiftForceArray[1]);
+      // Serial.println(lidLiftForceArray[2]);
+      // Serial.println(lidLiftForceArray[3]);
+      // Serial.println(lidLiftForceArray[4]);
+    }
+    
+    beginCycleTimer = true;
+    // DetentPushLinearActuator.Extend(); 
+    // delay(2500);
+    lidAtOpenPosition = true;
+    z=0; //reset cycle count used for force measurements
+  }
+  }
+  //END OF LID RAISING CODE
+
+  //START OF LOWERING LID CODE
+  Serial.println(lidAtOpenPosition);
+  if (lidAtOpenPosition == true){
+    LidLifterStepperMotor.moveTo(numStepsRaiseLid);
+    LidLifterStepperMotor.Unspool();
+    // DetentPushLinearActuator.Extend(); 
+    if (LidPusherStrainGauge.MeasureForce()>1){//Wait until force is being measured to store data
+      // Serial.print("Push FOrce: ");Serial.println(LidPusherStrainGauge.MeasureForce());
+    }
+  }
+
+  //   LidLifterStepperMotor.Unspool(numStepsLowerLid);
+  //   // Serial.println("TestLower");
+  //   // Serial.print("cycle time: "); Serial.println(raiseCycleTime);
+
+
 }

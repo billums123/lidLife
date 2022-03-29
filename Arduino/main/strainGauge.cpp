@@ -2,9 +2,11 @@
 #include "serialInput.h"
 
 // #define DEBUG
+
 double scaleReadout;
 double scaleCalibrationValue;
 float knownObjectWeight = 0;
+float measuredForce;
 char shouldStrainGaugeBeCalibrated;
 // HX711 strainGaugeObject;
 
@@ -18,6 +20,8 @@ StrainGauge::StrainGauge(int strainGaugeDout, int strainGaugeClk, float strainGa
 
 bool StrainGauge::Setup()
 {
+    pinMode(_dout_pin, OUTPUT);
+    pinMode(_clk_pin, OUTPUT);
     _strainGauge.begin(_dout_pin, _clk_pin);
     _strainGauge.set_scale(_calibration_factor);
     Serial.print("Does the ");
@@ -60,15 +64,14 @@ bool StrainGauge::Setup()
     {
         Serial.println("Invalid character input, please try again.");
         Serial.println(_strainGaugeName);
-        return;
+       
     }
 }
 
 float StrainGauge::MeasureForce()
 {
-
-    Serial.print("Force: ");
-    Serial.println(_strainGauge.get_units(3), 2);
+    measuredForce = _strainGauge.get_units(1), 2;
+    return(measuredForce);
 }
 double StrainGauge::CalbrateScale()
 {

@@ -9,7 +9,7 @@ class serialInputClass
 {
     public:
     serialInputClass();
-    unsigned int RX_SetupData(String DataRequest, String outputType);
+    unsigned int RX_SetupData(String DataRequest);
     String RX_SetupData_String(String DataRequest);
 };
 

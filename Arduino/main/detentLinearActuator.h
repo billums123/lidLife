@@ -1,19 +1,24 @@
 /*Functions for user to control the linear actuator used to measure closing force of lid*/
 
-#ifndef detentLinearActuator_h    
-#define detentLinearActuator_h    
-
+#ifndef DetentLinearActuator_h
+#define DetentLinearActuator_h
+#include "Arduino.h"
 // Place your main header code here.
 
-class detentLinearActuatorClass
+class DetentLinearActuator
 {
-    public:
-    detentLinearActuatorClass();
-    bool checkIfDetentsAreUsed(String detentUseStatus);
-    void setup(int linActDir1, int linActDir2, int linActPinPWM);
-    void extend(int linActDir1, int linActDir2, int linActPinPWM, int extensionTime);
-    void retract(int linActDir1, int linActDir2, int linActPinPWM, int rectractionTime);
+private:
+    int _linActDir1;
+    int _linActDir2;
+    int _linActPinPWM;
+
+public:
+    DetentLinearActuator(int linActDir1, int linActDir2, int _linActPinPWM);
+    bool CheckIfDetentsAreUsed(String detentUseStatus);
+    void Setup();
+    void Extend();
+    void Retract();
+    void Stop();
 };
 
-extern detentLinearActuatorClass detentLinearActuator;
-#endif // detentLinearAct_h    
+#endif // DetentLinearActuator_h
