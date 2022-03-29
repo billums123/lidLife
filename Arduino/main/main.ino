@@ -1,5 +1,3 @@
-
-
 //---------------Includes---------------//
 #include "HX711.h"
 #include "serialInput.h"
@@ -147,12 +145,6 @@ void loop()
   {
     if (CycleAndTimerCountIRSensors.SenseOpen() == 1)
     {
-
-      // if (beginCycleTimer == true)
-      // {
-      //   CycleAndTimerCountIRSensors.StartTimer();
-      // }
-      // beginCycleTimer = false;
       LidLifterStepperMotor.moveTo(numStepsRaiseLid);
       LidLifterStepperMotor.RaiseLid();
       if (((z % lidLifterMeasurementFrequency) == 0) && (z != 0))
@@ -164,14 +156,6 @@ void loop()
     }
     if (CycleAndTimerCountIRSensors.SenseOpen() == 0) // lid in open position
     {
-      // if (beginCycleTimer == false)
-      // {
-      //   raiseCycleTime = CycleAndTimerCountIRSensors.StopTimer();
-      // }
-
-      // beginCycleTimer = true;
-
-      // // delay(2500);
       lidAtOpenPosition = true;
       z = 0; // reset cycle count used for force measurements
       t = 0; // reset cycle count used for force array allocation
@@ -244,22 +228,6 @@ void loop()
     Serial.println();
     cycleComplete = false;
     /////////// end of cyle data transmission, start new cycle/////////////
-    // Display Data to Serial Monitor
-
-    // cycleData = "Cycle: ";
-    // cycleData = cycleData + machineNumber;    // global
-    // cycleData = cycleData + ",";
-    // cycleData = cycleData + temperature;
-    // cycleData = cycleData + ",";
-    // cycleData = cycleData + pressure;
-    // cycleData = cycleData + ",";
-    // cycleData = cycleData + cycle;
-    // cycleData = cycleData + ",";
-    // cycleData = cycleData + elaspedTime;
-    // Serial.println(cycleData);
   }
 
-  //   LidLifterStepperMotor.Unspool(numStepsLowerLid);
-  //   // Serial.println("TestLower");
-  //   // Serial.print("cycle time: "); Serial.println(raiseCycleTime);
 }
